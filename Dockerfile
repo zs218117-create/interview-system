@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # 腾讯云 Lighthouse Ubuntu 24.04：Next standalone + Prisma PG + OpenSSL 3
 FROM node:20-bookworm-slim AS base
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
@@ -8,7 +7,10 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+COPY prisma ./prisma
+# postinstall 需要 schema；构建阶段用占位库地址
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build"
+RUN cp prisma/schema.postgresql.prisma prisma/schema.prisma && npm ci
 
 FROM base AS builder
 WORKDIR /app
