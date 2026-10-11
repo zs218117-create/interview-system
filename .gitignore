@@ -35,3 +35,4 @@ uploads/*
 .env.local
 .env.neon.local
 /tmp/neon.env.quoted
+.env*

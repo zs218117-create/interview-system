@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Vercel 构建：临时切换到 PostgreSQL schema + 迁移 + Next build
+# Vercel 构建：临时切换到 PostgreSQL schema + 迁移 + 种子 + Next build
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -21,6 +21,9 @@ npx prisma generate
 
 echo "==> prisma migrate deploy"
 npx prisma migrate deploy
+
+echo "==> prisma db seed（V1 演示数据）"
+npx prisma db seed
 
 echo "==> next build"
 npx next build
