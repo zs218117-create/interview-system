@@ -38,5 +38,6 @@ uploads/*
 .env*
 
 .env.lighthouse
+!.env.lighthouse.example
 
 deploy/.env
