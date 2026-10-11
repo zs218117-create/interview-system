@@ -1,0 +1,290 @@
+// 个性化面试训练管理系统 — Prisma Schema（生产 / PostgreSQL）
+// 本地开发请使用 schema.prisma（SQLite）或 schema.sqlite.prisma
+// Vercel 构建脚本会在构建时切换到本文件
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Role: STUDENT | TUTOR | TA | ADMIN
+// DocumentType: PERSONAL_STATEMENT | EPQ | CV | TRANSCRIPT | OTHER
+// InterviewStatus: SCHEDULED | COMPLETED | CANCELLED
+// TaskStatus: PENDING | IN_PROGRESS | DONE
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  studentProfile       StudentProfile?
+  tutorAssignments     TutorStudentAssignment[] @relation("TutorAssignments")
+  taAssignments        TutorStudentAssignment[] @relation("TaAssignments")
+  documentsUploaded    Document[]               @relation("UploadedBy")
+  questionsCreated     Question[]               @relation("QuestionCreator")
+  interviewsAsTutor    InterviewTutor[]
+  evaluations          Evaluation[]
+  observations         Observation[]
+  journalEntries       JournalEntry[]
+  externalLessons      ExternalLesson[]         @relation("ExternalLessonCreator")
+  tasksCreated         Task[]                   @relation("TaskCreator")
+  tasksAssigned        Task[]                   @relation("TaskAssignee")
+  reAnswers            ReAnswer[]
+  interviewRecords     InterviewRecord[]        @relation("RecordUploader")
+}
+
+model StudentProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chineseName  String
+  englishName  String?
+  targetSchool String?
+  targetCourse String?
+  grade        String?
+  phone        String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  documents       Document[]
+  interviews      InterviewSession[]
+  evaluations     Evaluation[]
+  observations    Observation[]
+  journalEntries  JournalEntry[]
+  externalLessons ExternalLesson[]
+  tasks           Task[]
+  assignments     TutorStudentAssignment[]
+}
+
+model TutorStudentAssignment {
+  id        String   @id @default(cuid())
+  tutorId   String?
+  taId      String?
+  studentId String
+  roleNote  String?
+  createdAt DateTime @default(now())
+
+  tutor   User?          @relation("TutorAssignments", fields: [tutorId], references: [id], onDelete: Cascade)
+  ta      User?          @relation("TaAssignments", fields: [taId], references: [id], onDelete: Cascade)
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([tutorId])
+  @@index([taId])
+  @@index([studentId])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  studentId  String
+  uploadedBy String
+  type       String   @default("OTHER")
+  title      String
+  fileName   String
+  filePath   String
+  mimeType   String?
+  sizeBytes  Int?
+  createdAt  DateTime @default(now())
+
+  student  StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  uploader User           @relation("UploadedBy", fields: [uploadedBy], references: [id])
+
+  @@index([studentId])
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  subject     String?
+  difficulty  String?
+  createdById String
+  isTemplate  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator            User                @relation("QuestionCreator", fields: [createdById], references: [id])
+  interviewQuestions InterviewQuestion[]
+  evaluations        Evaluation[]
+  reAnswers          ReAnswer[]
+}
+
+model InterviewSession {
+  id          String   @id @default(cuid())
+  studentId   String
+  title       String
+  scheduledAt DateTime
+  durationMin Int      @default(30)
+  meetingUrl  String?
+  status      String   @default("SCHEDULED")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student     StudentProfile      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tutors      InterviewTutor[]
+  questions   InterviewQuestion[]
+  records     InterviewRecord[]
+  evaluations Evaluation[]
+
+  @@index([studentId])
+  @@index([scheduledAt])
+}
+
+model InterviewTutor {
+  id          String @id @default(cuid())
+  interviewId String
+  tutorId     String
+
+  interview InterviewSession @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  tutor     User             @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, tutorId])
+}
+
+model InterviewQuestion {
+  id          String @id @default(cuid())
+  interviewId String
+  questionId  String
+  orderIndex  Int    @default(0)
+
+  interview InterviewSession @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  question  Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, questionId])
+}
+
+model InterviewRecord {
+  id          String   @id @default(cuid())
+  interviewId String
+  uploadedBy  String
+  title       String
+  filePath    String?
+  externalUrl String?
+  recordType  String   @default("OTHER")
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  interview InterviewSession @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  uploader  User             @relation("RecordUploader", fields: [uploadedBy], references: [id])
+
+  @@index([interviewId])
+}
+
+model Evaluation {
+  id             String   @id @default(cuid())
+  interviewId    String
+  studentId      String
+  tutorId        String
+  questionId     String?
+  content        String
+  strengths      String?
+  improvements   String?
+  scoreHint      String?
+  assignReAnswer Boolean  @default(false)
+  originalAnswerNotes String?
+  compareNotes   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  interview InterviewSession @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tutor     User             @relation(fields: [tutorId], references: [id])
+  question  Question?        @relation(fields: [questionId], references: [id])
+  reAnswers ReAnswer[]
+
+  @@index([interviewId])
+  @@index([studentId])
+  @@index([tutorId])
+}
+
+model Observation {
+  id        String   @id @default(cuid())
+  studentId String
+  tutorId   String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tutor   User           @relation(fields: [tutorId], references: [id])
+
+  @@index([studentId])
+  @@index([tutorId])
+}
+
+model ReAnswer {
+  id           String   @id @default(cuid())
+  evaluationId String
+  questionId   String?
+  studentId    String
+  content      String
+  submittedAt  DateTime @default(now())
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  question   Question?  @relation(fields: [questionId], references: [id])
+  student    User       @relation(fields: [studentId], references: [id])
+
+  @@index([evaluationId])
+  @@index([studentId])
+}
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  studentId String
+  authorId  String
+  date      DateTime @default(now())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  author  User           @relation(fields: [authorId], references: [id])
+
+  @@index([studentId])
+}
+
+model ExternalLesson {
+  id          String    @id @default(cuid())
+  studentId   String
+  createdById String
+  title       String
+  provider    String?
+  date        DateTime?
+  content     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdBy User           @relation("ExternalLessonCreator", fields: [createdById], references: [id])
+
+  @@index([studentId])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  studentId   String
+  createdById String
+  assigneeId  String?
+  title       String
+  description String?
+  status      String    @default("PENDING")
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdBy User           @relation("TaskCreator", fields: [createdById], references: [id])
+  assignee  User?          @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  @@index([studentId])
+  @@index([status])
+}

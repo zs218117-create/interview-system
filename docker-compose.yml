@@ -1,0 +1,23 @@
+# 可选：本机用 Docker 跑 Postgres（不用 Neon 时）
+# 用法：docker compose up -d
+# 然后 .env 中：
+# DATABASE_URL="postgresql://interview:interview@localhost:5432/interview_system"
+# ./scripts/use-postgres.sh
+# rm -rf prisma/migrations && cp -R prisma/migrations-postgresql prisma/migrations
+# npx prisma migrate deploy && npm run db:seed
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: interview
+      POSTGRES_PASSWORD: interview
+      POSTGRES_DB: interview_system
+    ports:
+      - "5432:5432"
+    volumes:
+      - interview_pg_data:/var/lib/postgresql/data
+
+volumes:
+  interview_pg_data:
