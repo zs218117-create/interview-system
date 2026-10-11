@@ -3,8 +3,6 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Field, inputClass, btnPrimary } from "@/components/forms/FormBits";
-import { VoiceTextArea } from "@/components/voice/VoiceTextArea";
-import { VoiceInput } from "@/components/voice/VoiceInput";
 
 type UploadStatus = { name: string; state: "pending" | "uploading" | "ok" | "fail"; error?: string };
 
@@ -95,10 +93,21 @@ export function QuestionForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-3" id="create-question-form">
       <Field label="题目标题">
-        <VoiceInput value={title} onChange={setTitle} required />
+        <input
+          className={inputClass}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
       </Field>
       <Field label="题目内容">
-        <VoiceTextArea rows={4} value={content} onChange={setContent} required />
+        <textarea
+          className={inputClass}
+          rows={4}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          required
+        />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="科目">
