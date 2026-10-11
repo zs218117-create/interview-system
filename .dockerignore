@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env.neon.local
+.env.production
+.env.lighthouse
+prisma/dev.db
+prisma/dev.db-journal
+uploads/**
+!uploads/.gitkeep
+screenshots
+npm-debug.log*
+*.log
+.turbo
+coverage

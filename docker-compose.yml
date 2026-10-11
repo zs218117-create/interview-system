@@ -1,23 +1,67 @@
-# 可选：本机用 Docker 跑 Postgres（不用 Neon 时）
-# 用法：docker compose up -d
-# 然后 .env 中：
-# DATABASE_URL="postgresql://interview:interview@localhost:5432/interview_system"
-# ./scripts/use-postgres.sh
-# rm -rf prisma/migrations && cp -R prisma/migrations-postgresql prisma/migrations
-# npx prisma migrate deploy && npm run db:seed
+# 腾讯云 Lighthouse 生产编排：app + postgres + Caddy(:80)
+# 用法见 DEPLOY-CN.md / scripts/deploy-lighthouse.sh
+# 密钥放在 .env（勿提交 Git）
 
 services:
-  db:
+  postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: interview
-      POSTGRES_PASSWORD: interview
-      POSTGRES_DB: interview_system
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-interview}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 设置 POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-interview_system}
     volumes:
-      - interview_pg_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-interview} -d ${POSTGRES_DB:-interview_system}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - internal
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-interview}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-interview_system}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?请在 .env 设置 NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?请在 .env 设置 NEXTAUTH_SECRET}
+      RUN_SEED: ${RUN_SEED:-false}
+      NODE_ENV: production
+    volumes:
+      - uploads:/app/uploads
+    expose:
+      - "3000"
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      # 若已备案域名且要 HTTPS，可再映射 443，并改 Caddyfile
+      # - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - internal
+
+networks:
+  internal:
 
 volumes:
-  interview_pg_data:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

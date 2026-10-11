@@ -36,3 +36,7 @@ uploads/*
 .env.neon.local
 /tmp/neon.env.quoted
 .env*
+
+.env.lighthouse
+
+deploy/.env

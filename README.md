@@ -66,7 +66,9 @@ npm run db:seed
 npx prisma studio
 ```
 
-上线步骤见仓库根目录 **[DEPLOY.md](./DEPLOY.md)**（Vercel + Neon 等）。
+上线步骤：
+- 国内腾讯云 Lighthouse：**[DEPLOY-CN.md](./DEPLOY-CN.md)**（Docker Compose + 本机 Postgres）
+- 境外 Vercel + Neon：**[DEPLOY.md](./DEPLOY.md)**
 
 生产环境变量模板：`.env.production.example`。Vercel 构建命令已写入 `vercel.json`（`scripts/vercel-build.sh`）。
 
