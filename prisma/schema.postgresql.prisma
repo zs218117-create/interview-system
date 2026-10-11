@@ -40,6 +40,7 @@ model User {
   tasksAssigned        Task[]                   @relation("TaskAssignee")
   reAnswers            ReAnswer[]
   interviewRecords     InterviewRecord[]        @relation("RecordUploader")
+  questionAttachments  QuestionAttachment[]    @relation("QuestionAttachmentUploader")
 }
 
 model StudentProfile {
@@ -112,10 +113,37 @@ model Question {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  creator            User                @relation("QuestionCreator", fields: [createdById], references: [id])
+  creator            User                 @relation("QuestionCreator", fields: [createdById], references: [id])
   interviewQuestions InterviewQuestion[]
   evaluations        Evaluation[]
   reAnswers          ReAnswer[]
+  attachments        QuestionAttachment[]
+}
+
+
+model QuestionAttachment {
+  id            String   @id @default(cuid())
+  questionId    String
+  uploadedById  String
+  fileName      String
+  filePath      String
+  mimeType      String?
+  sizeBytes     Int?
+  kind          String   @default("OTHER")
+  extractedText String?
+  extractStatus String   @default("PENDING")
+  extractError  String?
+  parentId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  question Question             @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  uploader User                 @relation("QuestionAttachmentUploader", fields: [uploadedById], references: [id])
+  parent   QuestionAttachment?  @relation("ArchiveChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children QuestionAttachment[] @relation("ArchiveChildren")
+
+  @@index([questionId])
+  @@index([parentId])
 }
 
 model InterviewSession {

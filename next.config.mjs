@@ -3,7 +3,7 @@ const nextConfig = {
   output: "standalone",
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
+      bodySizeLimit: "40mb",
     },
     outputFileTracingIncludes: {
       "/**": [
@@ -11,6 +11,13 @@ const nextConfig = {
         "./node_modules/@prisma/client/**/*",
       ],
     },
+    serverComponentsExternalPackages: [
+      "pdf-parse",
+      "tesseract.js",
+      "mammoth",
+      "adm-zip",
+      "tar",
+    ],
   },
 };
 

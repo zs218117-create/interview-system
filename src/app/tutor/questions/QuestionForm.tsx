@@ -30,9 +30,11 @@ export function QuestionForm() {
       setMsg(d.error || "创建失败");
       return;
     }
+    const data = await res.json();
     setTitle("");
     setContent("");
-    setMsg("已创建");
+    setMsg("已创建，正在打开附件上传…");
+    router.push(`/tutor/questions/${data.id}`);
     router.refresh();
   }
 

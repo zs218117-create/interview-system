@@ -20,6 +20,32 @@
 - `.env.lighthouse.example` → 服务器上复制为 `.env`
 - `scripts/deploy-lighthouse.sh`
 
+## 国内服务器连不上 GitHub 时（推荐）
+
+广州等地域 Lighthouse 经常访问不了 `github.com:443`。不要死等 clone，改用离线包：
+
+1. 本机已备好源码包：`interview-system-lighthouse.tar.gz`（不含 `node_modules` / `.next` / 密钥）
+2. 用 SCP 或控制台「文件上传」把压缩包传到服务器，例如：
+
+```bash
+# 在你自己的电脑上执行（把 IP 换成公网 IP）
+scp interview-system-lighthouse.tar.gz ubuntu@你的公网IP:/tmp/
+```
+
+3. 在服务器上解压并部署：
+
+```bash
+sudo mkdir -p /opt/interview-system
+sudo chown "$USER":"$USER" /opt/interview-system
+cd /opt/interview-system
+tar -xzf /tmp/interview-system-lighthouse.tar.gz
+cp .env.lighthouse.example .env
+nano .env   # 改 POSTGRES_PASSWORD / NEXTAUTH_URL / NEXTAUTH_SECRET
+sudo bash scripts/deploy-lighthouse.sh
+```
+
+若坚持用 git：可先把仓库镜像到 Gitee / 腾讯工蜂，再在服务器 `git clone` 国内地址。
+
 ## 父代理 / 运维在 SSH 上要做的事
 
 假设代码已在服务器目录，例如 `/opt/interview-system`：
@@ -100,3 +126,38 @@ docker compose exec -e DATABASE_URL app sh -c 'cd /opt/prisma-tools && npx prism
 ## 密钥
 
 `.env` / `.env.lighthouse` **禁止进 Git**。只把 `.env.lighthouse.example` 留在仓库。
+
+
+## 题库附件 / OCR
+
+导师可在「题库 → 题目详情」上传 PDF、Word、Markdown、图片与压缩包；服务端会提取文字（图片用 Tesseract `chi_sim+eng`）。
+
+- **本 Docker 镜像**已安装 `poppler-utils` 与 `tesseract-ocr`（含中英文）。
+- **Vercel**：无系统 OCR/二进制，图片 OCR 依赖 `tesseract.js`（冷启动慢，且不适合大文件）；**国内正式请用 Lighthouse**。
+
+
+## 广州服务器更新命令（示例 IP：42.194.133.77）
+
+在能 SSH 的机器上执行（把密钥/用户换成你的）：
+
+```bash
+ssh ubuntu@42.194.133.77
+cd /opt/interview-system
+
+# 方式 A：git pull（推荐）
+git fetch origin && git reset --hard origin/main
+
+# 方式 B：无 git 时用 ghproxy 拉 zip
+# cd /tmp && curl -L -o app.zip https://ghproxy.net/https://github.com/zs218117-create/interview-system/archive/refs/heads/main.zip
+# unzip -o app.zip && rsync -a interview-system-main/ /opt/interview-system/ --exclude .env
+
+# 重建并启动（数据库卷保留）
+docker compose build app
+docker compose up -d
+
+# 看迁移/启动日志
+docker compose logs -f --tail=100 app
+```
+
+浏览器打开：`http://42.194.133.77/`  
+导师登录后进入 **题库 → 某题 → 附件与文字提取** 上传材料。
